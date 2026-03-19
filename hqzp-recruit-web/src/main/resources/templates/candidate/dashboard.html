@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>求职者中心</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="candidate-dashboard" class="page-container">
+        <div class="dashboard-layout">
+            <!-- Sidebar -->
+            <div class="dashboard-sidebar">
+                <div class="user-card">
+                    <img id="user-avatar" src="/images/default-avatar.png" class="user-avatar" alt=""/>
+                    <div id="user-name" class="user-name">加载中...</div>
+                    <div class="user-type-badge">求职者</div>
+                </div>
+                <el-menu :default-active="activeMenu" class="sidebar-menu">
+                    <el-menu-item index="/candidate/dashboard">
+                        <el-icon><House/></el-icon><span>工作台</span>
+                    </el-menu-item>
+                    <el-menu-item index="/candidate/resume">
+                        <el-icon><Document/></el-icon><span>我的简历</span>
+                    </el-menu-item>
+                    <el-menu-item index="/candidate/applications">
+                        <el-icon><List/></el-icon><span>投递记录</span>
+                    </el-menu-item>
+                    <el-menu-item index="/candidate/ai-assistant">
+                        <el-icon><MagicStick/></el-icon><span>AI职业助手</span>
+                    </el-menu-item>
+                </el-menu>
+            </div>
+
+            <!-- Main content -->
+            <div class="dashboard-main">
+                <el-row :gutter="20" class="stat-row">
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.totalApplications }}</div>
+                            <div class="stat-label">总投递</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.viewedCount }}</div>
+                            <div class="stat-label">已查看</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.interviewCount }}</div>
+                            <div class="stat-label">面试邀请</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.offeredCount }}</div>
+                            <div class="stat-label">已录用</div>
+                        </el-card>
+                    </el-col>
+                </el-row>
+
+                <el-card style="margin-top:20px">
+                    <template #header>
+                        <div class="card-header-row">
+                            <span>最近投递</span>
+                            <a th:href="@{/candidate/applications}">查看全部</a>
+                        </div>
+                    </template>
+                    <el-table :data="recentApplications" style="width:100%">
+                        <el-table-column prop="jobTitle" label="职位"/>
+                        <el-table-column prop="companyName" label="公司"/>
+                        <el-table-column prop="statusLabel" label="状态">
+                            <template #default="{ row }">
+                                <el-tag :type="statusType(row.status)">{{ row.statusLabel }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="createTime" label="投递时间" width="180">
+                            <template #default="{ row }">{{ row.createTime?.substring(0,10) }}</template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
+        </div>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const activeMenu = ref(location.pathname);
+        const stats = reactive({ totalApplications:0, viewedCount:0, interviewCount:0, offeredCount:0 });
+        const recentApplications = ref([]);
+
+        const statusType = (s) => ({0:'info',1:'',2:'warning',3:'warning',4:'success',5:'danger',6:'info'}[s] || '');
+
+        onMounted(() => {
+            const user = RecruitUtils.getUser();
+            if (user) {
+                document.getElementById('user-name').textContent = user.nickname || user.username;
+                if (user.avatar) document.getElementById('user-avatar').src = user.avatar;
+            }
+            window.RecruitApi.getCandidateApplications({ size: 5 }).then(res => {
+                const records = res.data?.records || [];
+                recentApplications.value = records;
+                stats.totalApplications = res.data?.total || 0;
+                stats.viewedCount = records.filter(r => r.status >= 1).length;
+                stats.interviewCount = records.filter(r => r.status === 2 || r.status === 3).length;
+                stats.offeredCount = records.filter(r => r.status === 4).length;
+            });
+        });
+
+        return { activeMenu, stats, recentApplications, statusType };
+    }
+}).use(ElementPlus).mount('#candidate-dashboard');
+</script>
+</th:block>
+
+</body>
+</html>

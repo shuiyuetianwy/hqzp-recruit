@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hqzp.recruit.startup.mapper.JobApplicationMapper">
+
+    <resultMap id="ApplicationVOMap" type="com.hqzp.recruit.common.domain.vo.ApplicationVO">
+        <id     column="id"                 property="id"/>
+        <result column="job_id"             property="jobId"/>
+        <result column="job_title"          property="jobTitle"/>
+        <result column="company_id"         property="companyId"/>
+        <result column="company_name"       property="companyName"/>
+        <result column="company_logo"       property="companyLogo"/>
+        <result column="candidate_id"       property="candidateId"/>
+        <result column="candidate_name"     property="candidateName"/>
+        <result column="candidate_phone"    property="candidatePhone"/>
+        <result column="resume_id"          property="resumeId"/>
+        <result column="status"             property="status"/>
+        <result column="hr_remark"          property="hrRemark"/>
+        <result column="ai_match_score"     property="aiMatchScore"/>
+        <result column="ai_match_analysis"  property="aiMatchAnalysis"/>
+        <result column="create_time"        property="createTime"/>
+        <result column="view_time"          property="viewTime"/>
+        <result column="interview_time"     property="interviewTime"/>
+        <result column="interview_location" property="interviewLocation"/>
+    </resultMap>
+
+    <select id="selectApplicationPage" resultMap="ApplicationVOMap">
+        SELECT
+            a.id, a.job_id, a.candidate_id, a.resume_id, a.company_id,
+            a.status, a.hr_remark, a.ai_match_score, a.ai_match_analysis,
+            a.create_time, a.view_time, a.interview_time, a.interview_location,
+            j.title        AS job_title,
+            c.name         AS company_name,
+            c.logo         AS company_logo,
+            u.real_name    AS candidate_name,
+            u.phone        AS candidate_phone
+        FROM job_application a
+        LEFT JOIN job     j ON a.job_id       = j.id AND j.deleted = 0
+        LEFT JOIN company c ON a.company_id   = c.id AND c.deleted = 0
+        LEFT JOIN resume  u ON a.resume_id    = u.id AND u.deleted = 0
+        WHERE a.deleted = 0
+        <if test="q.jobId != null">
+            AND a.job_id = #{q.jobId}
+        </if>
+        <if test="q.candidateId != null">
+            AND a.candidate_id = #{q.candidateId}
+        </if>
+        <if test="q.companyId != null">
+            AND a.company_id = #{q.companyId}
+        </if>
+        <if test="q.status != null">
+            AND a.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (j.title LIKE CONCAT('%', #{q.keyword}, '%')
+              OR u.real_name LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        ORDER BY a.create_time DESC
+    </select>
+
+</mapper>

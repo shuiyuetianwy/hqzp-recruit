@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>职位管理</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="hr-jobs-app" class="page-container">
+        <div class="page-header">
+            <h2>职位管理</h2>
+            <el-button type="primary" @click="() => location.href='/hr/jobs/create'">+ 发布职位</el-button>
+        </div>
+
+        <div class="filter-bar">
+            <el-input v-model="query.keyword" placeholder="搜索职位名称" clearable style="width:220px" @change="load"/>
+            <el-select v-model="query.status" placeholder="状态" clearable style="width:120px" @change="load">
+                <el-option label="草稿" :value="0"/>
+                <el-option label="已发布" :value="1"/>
+                <el-option label="已关闭" :value="2"/>
+            </el-select>
+        </div>
+
+        <el-table :data="jobs" v-loading="loading" style="width:100%">
+            <el-table-column prop="title" label="职位名称" min-width="160">
+                <template #default="{ row }">
+                    <a :href="`/jobs/${row.id}`" class="link-text">{{ row.title }}</a>
+                </template>
+            </el-table-column>
+            <el-table-column prop="city" label="城市" width="100"/>
+            <el-table-column label="薪资" width="140">
+                <template #default="{ row }">{{ formatSalary(row.salaryMin, row.salaryMax) }}</template>
+            </el-table-column>
+            <el-table-column prop="deliveryCount" label="投递数" width="80"/>
+            <el-table-column prop="viewCount" label="浏览数" width="80"/>
+            <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                    <el-tag :type="row.status===1?'success':row.status===2?'info':'warning'">
+                        {{ ['草稿','已发布','已关闭'][row.status] }}
+                    </el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="发布时间" width="120">
+                <template #default="{ row }">{{ row.createTime?.substring(0,10) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="200" fixed="right">
+                <template #default="{ row }">
+                    <el-button link type="primary" size="small"
+                               @click="() => location.href=`/hr/jobs/${row.id}/edit`">编辑</el-button>
+                    <el-button v-if="row.status===0||row.status===2" link type="success" size="small"
+                               @click="publish(row.id)">上架</el-button>
+                    <el-button v-if="row.status===1" link type="warning" size="small"
+                               @click="close(row.id)">关闭</el-button>
+                    <el-button link type="danger" size="small" @click="del(row.id)">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <div class="pagination-wrap">
+            <el-pagination v-model:current-page="query.current" v-model:page-size="query.size"
+                           :total="total" layout="total, prev, pager, next" @current-change="load"/>
+        </div>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(false);
+        const jobs = ref([]);
+        const total = ref(0);
+        const query = reactive({ keyword:'', status:null, current:1, size:10 });
+
+        const formatSalary = (min, max) => {
+            if (!min && !max) return '面议';
+            const fmt = v => v >= 10000 ? (v/1000).toFixed(0)+'K' : v;
+            return fmt(min) + '-' + fmt(max) + 'K/月';
+        };
+
+        const load = () => {
+            loading.value = true;
+            window.RecruitApi.getJobs(query).then(res => {
+                jobs.value = res.data?.records || [];
+                total.value = res.data?.total || 0;
+                loading.value = false;
+            }).catch(() => { loading.value = false; });
+        };
+
+        const publish = (id) => window.RecruitApi.publishJob(id).then(() => { ElementPlus.ElMessage.success('已上架'); load(); });
+        const close = (id) => window.RecruitApi.closeJob(id).then(() => { ElementPlus.ElMessage.success('已关闭'); load(); });
+        const del = (id) => {
+            ElementPlus.ElMessageBox.confirm('确认删除该职位？', '提示', { type: 'warning' })
+                .then(() => window.RecruitApi.deleteJob(id).then(() => { ElementPlus.ElMessage.success('已删除'); load(); }));
+        };
+
+        onMounted(load);
+        return { loading, jobs, total, query, formatSalary, load, publish, close, del };
+    }
+}).use(ElementPlus).mount('#hr-jobs-app');
+</script>
+</th:block>
+
+</body>
+</html>

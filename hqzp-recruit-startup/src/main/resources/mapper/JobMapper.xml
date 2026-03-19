@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hqzp.recruit.startup.mapper.JobMapper">
+
+    <resultMap id="JobVOMap" type="com.hqzp.recruit.common.domain.vo.JobVO">
+        <id     column="id"               property="id"/>
+        <result column="company_id"       property="companyId"/>
+        <result column="company_name"     property="companyName"/>
+        <result column="company_logo"     property="companyLogo"/>
+        <result column="company_industry" property="companyIndustry"/>
+        <result column="company_scale"    property="companyScale"/>
+        <result column="title"            property="title"/>
+        <result column="description"      property="description"/>
+        <result column="requirement"      property="requirement"/>
+        <result column="city"             property="city"/>
+        <result column="address"          property="address"/>
+        <result column="salary_min"       property="salaryMin"/>
+        <result column="salary_max"       property="salaryMax"/>
+        <result column="experience"       property="experience"/>
+        <result column="education"        property="education"/>
+        <result column="category"         property="category"/>
+        <result column="headcount"        property="headcount"/>
+        <result column="job_type"         property="jobType"/>
+        <result column="status"           property="status"/>
+        <result column="view_count"       property="viewCount"/>
+        <result column="delivery_count"   property="deliveryCount"/>
+        <result column="create_time"      property="createTime"/>
+    </resultMap>
+
+    <sql id="jobColumns">
+        j.id, j.company_id, j.title, j.description, j.requirement,
+        j.city, j.address, j.salary_min, j.salary_max,
+        j.experience, j.education, j.category, j.headcount,
+        j.job_type, j.status, j.view_count, j.delivery_count, j.create_time,
+        c.name AS company_name, c.logo AS company_logo,
+        c.industry AS company_industry, c.scale AS company_scale
+    </sql>
+
+    <select id="selectJobPage" resultMap="JobVOMap">
+        SELECT <include refid="jobColumns"/>
+        FROM job j
+        LEFT JOIN company c ON j.company_id = c.id AND c.deleted = 0
+        WHERE j.deleted = 0
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (j.title LIKE CONCAT('%', #{q.keyword}, '%')
+              OR j.description LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        <if test="q.city != null and q.city != ''">
+            AND j.city = #{q.city}
+        </if>
+        <if test="q.category != null and q.category != ''">
+            AND j.category = #{q.category}
+        </if>
+        <if test="q.experience != null and q.experience != ''">
+            AND j.experience = #{q.experience}
+        </if>
+        <if test="q.education != null and q.education != ''">
+            AND j.education = #{q.education}
+        </if>
+        <if test="q.jobType != null">
+            AND j.job_type = #{q.jobType}
+        </if>
+        <if test="q.salaryMin != null">
+            AND j.salary_max >= #{q.salaryMin}
+        </if>
+        <if test="q.salaryMax != null">
+            AND j.salary_min &lt;= #{q.salaryMax}
+        </if>
+        <if test="q.companyId != null">
+            AND j.company_id = #{q.companyId}
+        </if>
+        <if test="q.status != null">
+            AND j.status = #{q.status}
+        </if>
+        ORDER BY j.create_time DESC
+    </select>
+
+    <select id="selectJobDetail" resultMap="JobVOMap">
+        SELECT <include refid="jobColumns"/>
+        FROM job j
+        LEFT JOIN company c ON j.company_id = c.id AND c.deleted = 0
+        WHERE j.id = #{id} AND j.deleted = 0
+    </select>
+
+</mapper>

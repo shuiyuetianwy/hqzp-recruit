@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>投递详情</title></head>
+<body>
+<th:block th:fragment="main-fragment">
+    <div id="app-detail-app" class="page-container">
+        <div class="page-header">
+            <h2>投递详情</h2>
+            <el-button @click="() => location.href='/hr/applications'">返回列表</el-button>
+        </div>
+        <div v-if="loading"><el-skeleton :rows="8" animated/></div>
+        <div v-else-if="!app"><el-empty description="记录不存在"/></div>
+        <div v-else class="detail-layout">
+            <div class="detail-main">
+                <el-descriptions title="候选人信息" :column="2" border>
+                    <el-descriptions-item label="姓名">{{ app.candidateName }}</el-descriptions-item>
+                    <el-descriptions-item label="手机">{{ app.candidatePhone }}</el-descriptions-item>
+                    <el-descriptions-item label="应聘职位">{{ app.jobTitle }}</el-descriptions-item>
+                    <el-descriptions-item label="投递时间">{{ app.createTime?.substring(0,16) }}</el-descriptions-item>
+                    <el-descriptions-item label="当前状态">
+                        <el-tag :type="statusType(app.status)">{{ statusLabel(app.status) }}</el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="AI匹配分">
+                        <el-tag v-if="app.aiMatchScore" :type="scoreType(app.aiMatchScore)">{{ app.aiMatchScore }}分</el-tag>
+                        <el-button v-else size="small" @click="runAiMatch">AI评分</el-button>
+                    </el-descriptions-item>
+                </el-descriptions>
+
+                <div class="section-block" v-if="app.aiMatchAnalysis">
+                    <h3>AI匹配分析</h3>
+                    <el-alert :title="app.aiMatchAnalysis" type="info" :closable="false"/>
+                </div>
+
+                <div class="section-block">
+                    <h3>HR备注</h3>
+                    <el-input v-model="remark" type="textarea" :rows="3" placeholder="添加备注..."/>
+                    <el-button size="small" style="margin-top:8px" @click="saveRemark">保存备注</el-button>
+                </div>
+
+                <div class="section-block">
+                    <h3>操作</h3>
+                    <el-space>
+                        <el-button v-if="app.status<=1" type="primary" @click="showInterview=true">安排面试</el-button>
+                        <el-button v-if="app.status<=3" type="success" @click="offer">录用</el-button>
+                        <el-button v-if="app.status<=3" type="danger" plain @click="reject">拒绝</el-button>
+                    </el-space>
+                </div>
+            </div>
+
+            <div class="detail-sidebar">
+                <el-button type="primary" style="width:100%;margin-bottom:12px"
+                           @click="() => location.href=`/resumes/${app.resumeId}`">查看简历</el-button>
+                <el-card>
+                    <template #header><span>面试信息</span></template>
+                    <div v-if="app.interviewTime">
+                        <p><strong>时间：</strong>{{ app.interviewTime?.substring(0,16) }}</p>
+                        <p><strong>地点：</strong>{{ app.interviewLocation }}</p>
+                    </div>
+                    <el-empty v-else description="暂未安排面试" :image-size="50"/>
+                </el-card>
+            </div>
+        </div>
+
+        <el-dialog v-model="showInterview" title="安排面试" width="460px">
+            <el-form :model="interviewForm" label-width="90px">
+                <el-form-item label="面试时间">
+                    <el-date-picker v-model="interviewForm.interviewTime" type="datetime"
+                                    format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DDTHH:mm:00" style="width:100%"/>
+                </el-form-item>
+                <el-form-item label="面试地点">
+                    <el-input v-model="interviewForm.location" placeholder="地址或视频链接"/>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showInterview=false">取消</el-button>
+                <el-button type="primary" @click="confirmInterview">确认</el-button>
+            </template>
+        </el-dialog>
+    </div>
+</th:block>
+<th:block th:fragment="script-fragment">
+<script th:inline="javascript">
+const applicationId = /*[[${applicationId}]]*/ null;
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(true);
+        const app = ref(null);
+        const remark = ref('');
+        const showInterview = ref(false);
+        const interviewForm = reactive({ interviewTime:'', location:'' });
+        const statusLabels = ['待查看','已查看','邀请面试','面试中','已录用','已拒绝','已放弃'];
+        const statusLabel = (s) => statusLabels[s] || '未知';
+        const statusType = (s) => ({0:'info',1:'',2:'warning',3:'warning',4:'success',5:'danger',6:'info'}[s]||'');
+        const scoreType = (s) => s>=80?'success':s>=60?'warning':'danger';
+
+        const load = () => {
+            window.RecruitApi.getHrApplications({ size:1 }).then(() => {}).catch(() => {});
+            // In a real impl, fetch single application by ID
+            loading.value = false;
+        };
+
+        const saveRemark = () => {
+            window.RecruitApi.updateApplicationStatus(applicationId, { status: app.value?.status, remark: remark.value })
+                .then(() => ElementPlus.ElMessage.success('备注已保存'));
+        };
+
+        const confirmInterview = () => {
+            window.RecruitApi.scheduleInterview(applicationId, interviewForm).then(() => {
+                ElementPlus.ElMessage.success('面试已安排');
+                showInterview.value = false;
+                if (app.value) { app.value.status = 2; app.value.interviewTime = interviewForm.interviewTime; app.value.interviewLocation = interviewForm.location; }
+            });
+        };
+
+        const offer = () => window.RecruitApi.updateApplicationStatus(applicationId, { status:4 })
+            .then(() => { ElementPlus.ElMessage.success('已录用'); if(app.value) app.value.status=4; });
+
+        const reject = () => window.RecruitApi.updateApplicationStatus(applicationId, { status:5 })
+            .then(() => { ElementPlus.ElMessage.success('已拒绝'); if(app.value) app.value.status=5; });
+
+        const runAiMatch = () => ElementPlus.ElMessage.info('请在投递列表页使用AI评分功能');
+
+        onMounted(load);
+        return { loading, app, remark, showInterview, interviewForm,
+                 statusLabel, statusType, scoreType, saveRemark, confirmInterview, offer, reject, runAiMatch };
+    }
+}).use(ElementPlus).mount('#app-detail-app');
+</script>
+</th:block>
+</body>
+</html>

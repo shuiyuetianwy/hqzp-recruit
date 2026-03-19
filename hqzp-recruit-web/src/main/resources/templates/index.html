@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>首页</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <!-- Hero -->
+    <section class="hero">
+        <div id="hero-app">
+            <div class="hero-content">
+                <h1 class="hero-title">找到你理想的工作</h1>
+                <p class="hero-subtitle">海量职位，精准匹配，AI助力求职</p>
+                <div class="search-bar">
+                    <el-input v-model="keyword" placeholder="职位名称、公司、技能" size="large"
+                              class="search-input" @keyup.enter="search">
+                        <template #append>
+                            <el-select v-model="city" placeholder="城市" style="width:120px">
+                                <el-option label="全国" value=""/>
+                                <el-option v-for="c in cities" :key="c" :label="c" :value="c"/>
+                            </el-select>
+                        </template>
+                    </el-input>
+                    <el-button type="primary" size="large" @click="search">搜索职位</el-button>
+                </div>
+                <div class="hot-keywords">
+                    <span>热门：</span>
+                    <el-tag v-for="kw in hotKeywords" :key="kw" @click="quickSearch(kw)"
+                            class="hot-tag" style="cursor:pointer;margin:0 4px">{{ kw }}</el-tag>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latest Jobs -->
+    <section class="section">
+        <div class="section-header">
+            <h2>最新职位</h2>
+            <a th:href="@{/jobs}">查看全部 →</a>
+        </div>
+        <div id="latest-jobs-app">
+            <div v-if="loading" class="loading-wrap">
+                <el-skeleton :rows="3" animated/>
+            </div>
+            <div v-else class="job-grid">
+                <div v-for="job in jobs" :key="job.id" class="job-card"
+                     @click="goToJob(job.id)">
+                    <div class="job-card-header">
+                        <span class="job-title">{{ job.title }}</span>
+                        <span class="job-salary">{{ formatSalary(job.salaryMin, job.salaryMax) }}</span>
+                    </div>
+                    <div class="job-card-company">
+                        <img :src="job.companyLogo || '/images/default-company.png'"
+                             class="company-logo-sm" alt=""/>
+                        <span>{{ job.companyName }}</span>
+                    </div>
+                    <div class="job-card-tags">
+                        <el-tag size="small" type="info">{{ job.city }}</el-tag>
+                        <el-tag size="small" type="info">{{ job.experience || '经验不限' }}</el-tag>
+                        <el-tag size="small" type="info">{{ job.education || '学历不限' }}</el-tag>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Companies -->
+    <section class="section section-gray">
+        <div class="section-header">
+            <h2>热门企业</h2>
+            <a th:href="@{/companies}">查看全部 →</a>
+        </div>
+        <div id="featured-companies-app">
+            <div class="company-grid">
+                <div v-for="c in companies" :key="c.id" class="company-card"
+                     @click="goToCompany(c.id)">
+                    <img :src="c.logo || '/images/default-company.png'" class="company-logo" alt=""/>
+                    <div class="company-name">{{ c.name }}</div>
+                    <div class="company-meta">{{ c.industry }} · {{ scaleLabel(c.scale) }}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+// Hero search app
+const { createApp, ref } = Vue;
+createApp({
+    setup() {
+        const keyword = ref('');
+        const city = ref('');
+        const cities = ref(['北京','上海','广州','深圳','杭州','成都','武汉','南京','西安','重庆']);
+        const hotKeywords = ref(['Java开发','前端工程师','产品经理','数据分析','UI设计','运营']);
+        const search = () => {
+            window.location.href = `/jobs?keyword=${encodeURIComponent(keyword.value)}&city=${encodeURIComponent(city.value)}`;
+        };
+        const quickSearch = (kw) => {
+            window.location.href = `/jobs?keyword=${encodeURIComponent(kw)}`;
+        };
+        return { keyword, city, cities, hotKeywords, search, quickSearch };
+    }
+}).use(ElementPlus).mount('#hero-app');
+
+// Latest jobs app
+createApp({
+    setup() {
+        const jobs = ref([]);
+        const loading = ref(true);
+        const formatSalary = (min, max) => {
+            if (!min && !max) return '薪资面议';
+            const fmt = v => v >= 10000 ? (v/1000).toFixed(0)+'K' : v+'元';
+            return fmt(min) + '-' + fmt(max) + '/月';
+        };
+        const goToJob = (id) => window.location.href = `/jobs/${id}`;
+        window.RecruitApi.getJobs({ size: 8, status: 1 }).then(res => {
+            jobs.value = res.data?.records || [];
+            loading.value = false;
+        }).catch(() => { loading.value = false; });
+        return { jobs, loading, formatSalary, goToJob };
+    }
+}).use(ElementPlus).mount('#latest-jobs-app');
+
+// Featured companies app
+createApp({
+    setup() {
+        const companies = ref([]);
+        const scaleLabel = (s) => (['','<20人','20-99人','100-499人','500-999人','1000+人'][s] || '');
+        const goToCompany = (id) => window.location.href = `/companies/${id}`;
+        window.RecruitApi.getCompanies({ size: 8 }).then(res => {
+            companies.value = res.data?.records || [];
+        });
+        return { companies, scaleLabel, goToCompany };
+    }
+}).use(ElementPlus).mount('#featured-companies-app');
+</script>
+</th:block>
+
+</body>
+</html>

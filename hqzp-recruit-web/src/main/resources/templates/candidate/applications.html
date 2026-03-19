@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>投递记录</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="applications-app" class="page-container">
+        <div class="page-header"><h2>投递记录</h2></div>
+
+        <div class="filter-bar">
+            <el-select v-model="query.status" placeholder="投递状态" clearable style="width:140px" @change="load">
+                <el-option v-for="s in statuses" :key="s.code" :label="s.label" :value="s.code"/>
+            </el-select>
+        </div>
+
+        <el-table :data="applications" v-loading="loading" style="width:100%">
+            <el-table-column prop="jobTitle" label="职位" min-width="150">
+                <template #default="{ row }">
+                    <a :href="`/jobs/${row.jobId}`" class="link-text">{{ row.jobTitle }}</a>
+                </template>
+            </el-table-column>
+            <el-table-column prop="companyName" label="公司" width="160"/>
+            <el-table-column label="状态" width="110">
+                <template #default="{ row }">
+                    <el-tag :type="statusType(row.status)">{{ row.statusLabel }}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="interviewTime" label="面试时间" width="160">
+                <template #default="{ row }">{{ row.interviewTime?.substring(0,16) || '-' }}</template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="投递时间" width="120">
+                <template #default="{ row }">{{ row.createTime?.substring(0,10) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
+                <template #default="{ row }">
+                    <el-button v-if="row.status < 4" type="danger" link size="small"
+                               @click="abandon(row.id)">放弃</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <div class="pagination-wrap">
+            <el-pagination v-model:current-page="query.current" v-model:page-size="query.size"
+                           :total="total" layout="total, prev, pager, next"
+                           @current-change="load"/>
+        </div>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(false);
+        const applications = ref([]);
+        const total = ref(0);
+        const query = reactive({ status: null, current: 1, size: 10 });
+        const statuses = [
+            {code:0,label:'待查看'},{code:1,label:'已查看'},{code:2,label:'邀请面试'},
+            {code:3,label:'面试中'},{code:4,label:'已录用'},{code:5,label:'已拒绝'},{code:6,label:'已放弃'}
+        ];
+        const statusType = (s) => ({0:'info',1:'',2:'warning',3:'warning',4:'success',5:'danger',6:'info'}[s] || '');
+
+        const load = () => {
+            loading.value = true;
+            window.RecruitApi.getCandidateApplications(query).then(res => {
+                applications.value = (res.data?.records || []).map(r => ({
+                    ...r, statusLabel: statuses.find(s => s.code === r.status)?.label || '未知'
+                }));
+                total.value = res.data?.total || 0;
+                loading.value = false;
+            }).catch(() => { loading.value = false; });
+        };
+
+        const abandon = (id) => {
+            ElementPlus.ElMessageBox.confirm('确认放弃该投递？', '提示', { type: 'warning' })
+                .then(() => window.RecruitApi.abandonApplication(id).then(() => {
+                    ElementPlus.ElMessage.success('已放弃');
+                    load();
+                }));
+        };
+
+        onMounted(load);
+        return { loading, applications, total, query, statuses, statusType, load, abandon };
+    }
+}).use(ElementPlus).mount('#applications-app');
+</script>
+</th:block>
+
+</body>
+</html>

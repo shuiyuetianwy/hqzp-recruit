@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>HR工作台</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="hr-dashboard" class="page-container">
+        <div class="dashboard-layout">
+            <div class="dashboard-sidebar">
+                <div class="user-card">
+                    <img id="user-avatar" src="/images/default-avatar.png" class="user-avatar" alt=""/>
+                    <div id="user-name" class="user-name">加载中...</div>
+                    <div class="user-type-badge hr-badge">HR</div>
+                </div>
+                <el-menu :default-active="activeMenu" class="sidebar-menu">
+                    <el-menu-item index="/hr/dashboard"><el-icon><House/></el-icon><span>工作台</span></el-menu-item>
+                    <el-menu-item index="/hr/jobs"><el-icon><Briefcase/></el-icon><span>职位管理</span></el-menu-item>
+                    <el-menu-item index="/hr/applications"><el-icon><List/></el-icon><span>投递管理</span></el-menu-item>
+                    <el-menu-item index="/hr/company"><el-icon><OfficeBuilding/></el-icon><span>公司信息</span></el-menu-item>
+                </el-menu>
+            </div>
+
+            <div class="dashboard-main">
+                <el-row :gutter="20" class="stat-row">
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.publishedJobs }}</div>
+                            <div class="stat-label">在招职位</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.todayApplications }}</div>
+                            <div class="stat-label">今日投递</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.pendingReview }}</div>
+                            <div class="stat-label">待查看</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card class="stat-card">
+                            <div class="stat-num">{{ stats.interviewScheduled }}</div>
+                            <div class="stat-label">已约面试</div>
+                        </el-card>
+                    </el-col>
+                </el-row>
+
+                <el-card style="margin-top:20px">
+                    <template #header>
+                        <div class="card-header-row">
+                            <span>最新投递</span>
+                            <a th:href="@{/hr/applications}">查看全部</a>
+                        </div>
+                    </template>
+                    <el-table :data="recentApplications" style="width:100%">
+                        <el-table-column prop="candidateName" label="候选人" width="120"/>
+                        <el-table-column prop="jobTitle" label="应聘职位"/>
+                        <el-table-column prop="aiMatchScore" label="AI匹配" width="100">
+                            <template #default="{ row }">
+                                <el-tag v-if="row.aiMatchScore" :type="scoreType(row.aiMatchScore)">
+                                    {{ row.aiMatchScore }}分
+                                </el-tag>
+                                <span v-else>-</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="状态" width="100">
+                            <template #default="{ row }">
+                                <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="createTime" label="投递时间" width="120">
+                            <template #default="{ row }">{{ row.createTime?.substring(0,10) }}</template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="120">
+                            <template #default="{ row }">
+                                <el-button link type="primary" size="small"
+                                           @click="() => location.href=`/hr/applications/${row.id}`">查看</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
+        </div>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const activeMenu = ref(location.pathname);
+        const stats = reactive({ publishedJobs:0, todayApplications:0, pendingReview:0, interviewScheduled:0 });
+        const recentApplications = ref([]);
+        const statusLabels = ['待查看','已查看','邀请面试','面试中','已录用','已拒绝','已放弃'];
+        const statusLabel = (s) => statusLabels[s] || '未知';
+        const statusType = (s) => ({0:'info',1:'',2:'warning',3:'warning',4:'success',5:'danger',6:'info'}[s] || '');
+        const scoreType = (s) => s >= 80 ? 'success' : s >= 60 ? 'warning' : 'danger';
+
+        onMounted(() => {
+            const user = RecruitUtils.getUser();
+            if (user) {
+                document.getElementById('user-name').textContent = user.nickname || user.username;
+                if (user.avatar) document.getElementById('user-avatar').src = user.avatar;
+            }
+            window.RecruitApi.getHrApplications({ size: 5 }).then(res => {
+                const records = res.data?.records || [];
+                recentApplications.value = records;
+                stats.pendingReview = records.filter(r => r.status === 0).length;
+                stats.interviewScheduled = records.filter(r => r.status === 2 || r.status === 3).length;
+                stats.todayApplications = records.length;
+            });
+            window.RecruitApi.getJobs({ status: 1, size: 1 }).then(res => {
+                stats.publishedJobs = res.data?.total || 0;
+            });
+        });
+
+        return { activeMenu, stats, recentApplications, statusLabel, statusType, scoreType };
+    }
+}).use(ElementPlus).mount('#hr-dashboard');
+</script>
+</th:block>
+
+</body>
+</html>

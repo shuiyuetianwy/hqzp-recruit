@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>企业详情</title></head>
+<body>
+<th:block th:fragment="main-fragment">
+    <div id="company-detail-app" class="page-container">
+        <div v-if="loading"><el-skeleton :rows="6" animated/></div>
+        <div v-else-if="!company"><el-empty description="企业不存在"/></div>
+        <div v-else>
+            <div class="company-detail-header">
+                <img :src="company.logo||'/images/default-company.png'" class="company-logo-lg" alt=""/>
+                <div>
+                    <h1>{{ company.name }}</h1>
+                    <div class="company-meta-row">
+                        <el-tag>{{ company.industry }}</el-tag>
+                        <el-tag type="info">{{ scaleLabel(company.scale) }}</el-tag>
+                        <el-tag type="info" v-if="company.financingStage">{{ company.financingStage }}</el-tag>
+                        <span>{{ company.city }}</span>
+                    </div>
+                    <a v-if="company.website" :href="company.website" target="_blank" class="link-text">{{ company.website }}</a>
+                </div>
+            </div>
+            <el-divider/>
+            <div class="section-block">
+                <h3>公司简介</h3>
+                <p>{{ company.description || '暂无简介' }}</p>
+            </div>
+            <div class="section-block">
+                <h3>在招职位</h3>
+                <div class="job-list">
+                    <div v-for="job in jobs" :key="job.id" class="job-list-item" @click="() => location.href=`/jobs/${job.id}`">
+                        <span class="job-list-title">{{ job.title }}</span>
+                        <span class="salary-text">{{ formatSalary(job.salaryMin, job.salaryMax) }}</span>
+                        <el-tag size="small">{{ job.city }}</el-tag>
+                    </div>
+                    <el-empty v-if="jobs.length===0" description="暂无在招职位" :image-size="60"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</th:block>
+<th:block th:fragment="script-fragment">
+<script th:inline="javascript">
+const companyId = /*[[${companyId}]]*/ null;
+const { createApp, ref, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(true);
+        const company = ref(null);
+        const jobs = ref([]);
+        const scaleLabel = (s) => (['','<20人','20-99人','100-499人','500-999人','1000+人'][s]||'');
+        const formatSalary = (min, max) => {
+            if (!min && !max) return '薪资面议';
+            const fmt = v => v >= 10000 ? (v/1000).toFixed(0)+'K' : v+'元';
+            return fmt(min) + '-' + fmt(max) + '/月';
+        };
+        onMounted(() => {
+            window.RecruitApi.getCompanyDetail(companyId).then(res => {
+                company.value = res.data;
+                loading.value = false;
+            }).catch(() => { loading.value = false; });
+            window.RecruitApi.getJobs({ companyId, status:1, size:20 }).then(res => {
+                jobs.value = res.data?.records || [];
+            });
+        });
+        return { loading, company, jobs, scaleLabel, formatSalary };
+    }
+}).use(ElementPlus).mount('#company-detail-app');
+</script>
+</th:block>
+</body>
+</html>

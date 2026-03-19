@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hqzp.recruit.startup.mapper.ResumeMapper">
+
+    <resultMap id="ResumeVOMap" type="com.hqzp.recruit.common.domain.vo.ResumeVO">
+        <id     column="id"               property="id"/>
+        <result column="user_id"          property="userId"/>
+        <result column="real_name"        property="realName"/>
+        <result column="gender"           property="gender"/>
+        <result column="age"              property="age"/>
+        <result column="phone"            property="phone"/>
+        <result column="email"            property="email"/>
+        <result column="city"             property="city"/>
+        <result column="avatar"           property="avatar"/>
+        <result column="current_title"    property="currentTitle"/>
+        <result column="experience_years" property="experienceYears"/>
+        <result column="education"        property="education"/>
+        <result column="summary"          property="summary"/>
+        <result column="ai_score"         property="aiScore"/>
+        <result column="ai_analysis"      property="aiAnalysis"/>
+        <result column="attachment_key"   property="attachmentKey"/>
+        <result column="attachment_name"  property="attachmentName"/>
+        <result column="visibility"       property="visibility"/>
+        <result column="create_time"      property="createTime"/>
+        <result column="update_time"      property="updateTime"/>
+        <collection property="workExps"
+                    ofType="com.hqzp.recruit.common.domain.vo.ResumeVO$WorkExpVO"
+                    columnPrefix="we_">
+            <id     column="id"           property="id"/>
+            <result column="company_name" property="companyName"/>
+            <result column="job_title"    property="jobTitle"/>
+            <result column="start_date"   property="startDate"/>
+            <result column="end_date"     property="endDate"/>
+            <result column="is_current"   property="isCurrent"/>
+            <result column="description"  property="description"/>
+        </collection>
+        <collection property="eduExps"
+                    ofType="com.hqzp.recruit.common.domain.vo.ResumeVO$EduExpVO"
+                    columnPrefix="ee_">
+            <id     column="id"           property="id"/>
+            <result column="school_name"  property="schoolName"/>
+            <result column="major"        property="major"/>
+            <result column="degree"       property="degree"/>
+            <result column="start_date"   property="startDate"/>
+            <result column="end_date"     property="endDate"/>
+            <result column="description"  property="description"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectResumeDetail" resultMap="ResumeVOMap">
+        SELECT
+            r.id, r.user_id, r.real_name, r.gender, r.age, r.phone, r.email,
+            r.city, r.avatar, r.current_title, r.experience_years, r.education,
+            r.summary, r.ai_score, r.ai_analysis, r.attachment_key, r.attachment_name,
+            r.visibility, r.create_time, r.update_time,
+            we.id          AS we_id,
+            we.company_name AS we_company_name,
+            we.job_title    AS we_job_title,
+            we.start_date   AS we_start_date,
+            we.end_date     AS we_end_date,
+            we.is_current   AS we_is_current,
+            we.description  AS we_description,
+            ee.id           AS ee_id,
+            ee.school_name  AS ee_school_name,
+            ee.major        AS ee_major,
+            ee.degree       AS ee_degree,
+            ee.start_date   AS ee_start_date,
+            ee.end_date     AS ee_end_date,
+            ee.description  AS ee_description
+        FROM resume r
+        LEFT JOIN resume_work_exp we ON we.resume_id = r.id AND we.deleted = 0
+        LEFT JOIN resume_edu_exp  ee ON ee.resume_id = r.id AND ee.deleted = 0
+        WHERE r.id = #{id} AND r.deleted = 0
+    </select>
+
+</mapper>

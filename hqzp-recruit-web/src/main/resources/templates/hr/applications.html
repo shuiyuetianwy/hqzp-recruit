@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>投递管理</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="hr-applications-app" class="page-container">
+        <div class="page-header"><h2>投递管理</h2></div>
+
+        <div class="filter-bar">
+            <el-input v-model="query.keyword" placeholder="候选人姓名/职位" clearable style="width:220px" @change="load"/>
+            <el-select v-model="query.status" placeholder="状态" clearable style="width:130px" @change="load">
+                <el-option v-for="s in statuses" :key="s.code" :label="s.label" :value="s.code"/>
+            </el-select>
+        </div>
+
+        <el-table :data="applications" v-loading="loading" style="width:100%">
+            <el-table-column prop="candidateName" label="候选人" width="120"/>
+            <el-table-column prop="jobTitle" label="应聘职位" min-width="150"/>
+            <el-table-column prop="aiMatchScore" label="AI匹配" width="90">
+                <template #default="{ row }">
+                    <el-tag v-if="row.aiMatchScore" :type="scoreType(row.aiMatchScore)">{{ row.aiMatchScore }}分</el-tag>
+                    <el-button v-else link size="small" @click="aiMatch(row)">评分</el-button>
+                </template>
+            </el-table-column>
+            <el-table-column label="状态" width="110">
+                <template #default="{ row }">
+                    <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="投递时间" width="120">
+                <template #default="{ row }">{{ row.createTime?.substring(0,10) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="200" fixed="right">
+                <template #default="{ row }">
+                    <el-button link type="primary" size="small"
+                               @click="() => location.href=`/hr/applications/${row.id}`">查看</el-button>
+                    <el-button v-if="row.status===0" link type="success" size="small"
+                               @click="invite(row.id)">邀请面试</el-button>
+                    <el-button v-if="row.status<=3" link type="danger" size="small"
+                               @click="reject(row.id)">拒绝</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <div class="pagination-wrap">
+            <el-pagination v-model:current-page="query.current" v-model:page-size="query.size"
+                           :total="total" layout="total, prev, pager, next" @current-change="load"/>
+        </div>
+
+        <!-- Interview schedule dialog -->
+        <el-dialog v-model="interviewDialogVisible" title="安排面试" width="480px">
+            <el-form :model="interviewForm" label-width="90px">
+                <el-form-item label="面试时间">
+                    <el-date-picker v-model="interviewForm.interviewTime" type="datetime"
+                                    format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DDTHH:mm:00"
+                                    style="width:100%"/>
+                </el-form-item>
+                <el-form-item label="面试地点">
+                    <el-input v-model="interviewForm.location" placeholder="地址或视频会议链接"/>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="interviewDialogVisible=false">取消</el-button>
+                <el-button type="primary" @click="confirmInterview">确认</el-button>
+            </template>
+        </el-dialog>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(false);
+        const applications = ref([]);
+        const total = ref(0);
+        const query = reactive({ keyword:'', status:null, current:1, size:10 });
+        const interviewDialogVisible = ref(false);
+        const interviewForm = reactive({ applicationId:null, interviewTime:'', location:'' });
+        const statuses = [
+            {code:0,label:'待查看'},{code:1,label:'已查看'},{code:2,label:'邀请面试'},
+            {code:3,label:'面试中'},{code:4,label:'已录用'},{code:5,label:'已拒绝'}
+        ];
+        const statusLabel = (s) => statuses.find(x=>x.code===s)?.label || '未知';
+        const statusType = (s) => ({0:'info',1:'',2:'warning',3:'warning',4:'success',5:'danger'}[s] || '');
+        const scoreType = (s) => s >= 80 ? 'success' : s >= 60 ? 'warning' : 'danger';
+
+        const load = () => {
+            loading.value = true;
+            window.RecruitApi.getHrApplications(query).then(res => {
+                applications.value = res.data?.records || [];
+                total.value = res.data?.total || 0;
+                loading.value = false;
+            }).catch(() => { loading.value = false; });
+        };
+
+        const invite = (id) => {
+            interviewForm.applicationId = id;
+            interviewDialogVisible.value = true;
+        };
+
+        const confirmInterview = () => {
+            window.RecruitApi.scheduleInterview(interviewForm.applicationId, {
+                interviewTime: interviewForm.interviewTime,
+                location: interviewForm.location
+            }).then(() => {
+                ElementPlus.ElMessage.success('面试已安排');
+                interviewDialogVisible.value = false;
+                load();
+            });
+        };
+
+        const reject = (id) => {
+            ElementPlus.ElMessageBox.confirm('确认拒绝该候选人？', '提示', { type: 'warning' })
+                .then(() => window.RecruitApi.updateApplicationStatus(id, { status: 5 })
+                    .then(() => { ElementPlus.ElMessage.success('已拒绝'); load(); }));
+        };
+
+        const aiMatch = (row) => {
+            ElementPlus.ElMessage.info('AI匹配评分中...');
+            window.RecruitApi.aiMatchJobResume({
+                applicationId: row.id,
+                jobDescription: row.jobTitle,
+                resumeText: row.candidateName
+            }).then(res => {
+                try {
+                    const result = JSON.parse(res.data.content);
+                    row.aiMatchScore = result.score;
+                    ElementPlus.ElMessage.success(`AI匹配分：${result.score}分`);
+                } catch(e) { ElementPlus.ElMessage.error('解析失败'); }
+            });
+        };
+
+        onMounted(load);
+        return { loading, applications, total, query, statuses, interviewDialogVisible, interviewForm,
+                 statusLabel, statusType, scoreType, load, invite, confirmInterview, reject, aiMatch };
+    }
+}).use(ElementPlus).mount('#hr-applications-app');
+</script>
+</th:block>
+
+</body>
+</html>

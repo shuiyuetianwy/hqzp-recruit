@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle} ?: 'HQZP招聘'">HQZP招聘</title>
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css"/>
+    <!-- Custom styles -->
+    <link rel="stylesheet" th:href="@{/css/main.css}"/>
+    <th:block th:replace="${headExtra} ?: ~{}"/>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="navbar" class="navbar">
+    <div class="navbar-brand">
+        <a th:href="@{/}">
+            <img th:src="@{/images/logo.png}" alt="HQZP" class="logo" onerror="this.style.display='none'"/>
+            <span class="brand-name">HQZP招聘</span>
+        </a>
+    </div>
+    <div class="navbar-menu">
+        <a th:href="@{/jobs}" class="nav-link">找工作</a>
+        <a th:href="@{/companies}" class="nav-link">找公司</a>
+    </div>
+    <div id="navbar-user" class="navbar-user">
+        <!-- Rendered by Vue based on auth state -->
+    </div>
+</nav>
+
+<!-- Page content -->
+<main class="main-content">
+    <th:block th:replace="${content}"/>
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-inner">
+        <p>© 2024 HQZP招聘平台 版权所有</p>
+    </div>
+</footer>
+
+<!-- Vue 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<!-- Element Plus JS -->
+<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+<!-- Axios -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<!-- App utilities -->
+<script th:src="@{/js/utils.js}"></script>
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/navbar.js}"></script>
+<th:block th:replace="${scriptExtra} ?: ~{}"/>
+</body>
+</html>

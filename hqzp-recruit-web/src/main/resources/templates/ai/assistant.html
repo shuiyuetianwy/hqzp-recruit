@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>AI职业助手</title></head>
+<body>
+<th:block th:fragment="main-fragment">
+    <div id="ai-assistant-app" class="page-container">
+        <div class="page-header"><h2>AI职业助手</h2></div>
+        <el-tabs v-model="activeTab">
+            <el-tab-pane label="简历优化" name="optimise">
+                <el-form label-width="100px" style="max-width:700px">
+                    <el-form-item label="优化片段">
+                        <el-select v-model="optimiseForm.section" style="width:100%">
+                            <el-option label="自我介绍" value="自我介绍"/>
+                            <el-option label="工作经历" value="工作经历"/>
+                            <el-option label="项目经历" value="项目经历"/>
+                            <el-option label="技能特长" value="技能特长"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="原始内容">
+                        <el-input v-model="optimiseForm.content" type="textarea" :rows="5" placeholder="粘贴需要优化的内容"/>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" :loading="optimiseLoading" @click="doOptimise">AI优化</el-button>
+                    </el-form-item>
+                    <el-form-item label="优化结果" v-if="optimiseResult">
+                        <el-input v-model="optimiseResult" type="textarea" :rows="5" readonly/>
+                        <el-button size="small" style="margin-top:8px" @click="copyText(optimiseResult)">复制</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+
+            <el-tab-pane label="职业建议" name="career">
+                <el-form label-width="100px" style="max-width:700px">
+                    <el-form-item label="目标职位">
+                        <el-input v-model="careerForm.targetJob" placeholder="例如：高级Java工程师"/>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" :loading="careerLoading" @click="doCareerAdvice">获取建议</el-button>
+                    </el-form-item>
+                    <div v-if="careerResult" class="ai-result-card">
+                        <el-tabs>
+                            <el-tab-pane label="技能差距">
+                                <ul><li v-for="s in careerResult.skillGaps" :key="s">{{ s }}</li></ul>
+                            </el-tab-pane>
+                            <el-tab-pane label="学习路径">
+                                <ul><li v-for="s in careerResult.learningPath" :key="s">{{ s }}</li></ul>
+                            </el-tab-pane>
+                            <el-tab-pane label="短期目标">
+                                <ul><li v-for="s in careerResult.shortTermGoals" :key="s">{{ s }}</li></ul>
+                            </el-tab-pane>
+                            <el-tab-pane label="求职建议">
+                                <ul><li v-for="s in careerResult.jobSearchTips" :key="s">{{ s }}</li></ul>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                </el-form>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+</th:block>
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive } = Vue;
+createApp({
+    setup() {
+        const activeTab = ref('optimise');
+        const optimiseForm = reactive({ section:'自我介绍', content:'' });
+        const optimiseResult = ref('');
+        const optimiseLoading = ref(false);
+        const careerForm = reactive({ targetJob:'' });
+        const careerResult = ref(null);
+        const careerLoading = ref(false);
+
+        const doOptimise = () => {
+            if (!optimiseForm.content) { ElementPlus.ElMessage.warning('请输入需要优化的内容'); return; }
+            optimiseLoading.value = true;
+            window.RecruitApi.aiOptimiseResume(optimiseForm)
+                .then(res => { optimiseResult.value = res.data?.content || ''; })
+                .catch(() => ElementPlus.ElMessage.error('优化失败'))
+                .finally(() => { optimiseLoading.value = false; });
+        };
+
+        const doCareerAdvice = () => {
+            if (!careerForm.targetJob) { ElementPlus.ElMessage.warning('请输入目标职位'); return; }
+            careerLoading.value = true;
+            window.RecruitApi.aiCareerAdvice(careerForm)
+                .then(res => {
+                    try { careerResult.value = JSON.parse(res.data?.content); }
+                    catch(e) { ElementPlus.ElMessage.error('解析失败'); }
+                })
+                .catch(() => ElementPlus.ElMessage.error('获取建议失败'))
+                .finally(() => { careerLoading.value = false; });
+        };
+
+        const copyText = (text) => {
+            navigator.clipboard.writeText(text).then(() => ElementPlus.ElMessage.success('已复制'));
+        };
+
+        return { activeTab, optimiseForm, optimiseResult, optimiseLoading,
+                 careerForm, careerResult, careerLoading, doOptimise, doCareerAdvice, copyText };
+    }
+}).use(ElementPlus).mount('#ai-assistant-app');
+</script>
+</th:block>
+</body>
+</html>

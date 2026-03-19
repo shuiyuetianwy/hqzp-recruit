@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>公司信息</title></head>
+<body>
+<th:block th:fragment="main-fragment">
+    <div id="hr-company-app" class="page-container">
+        <div class="page-header">
+            <h2>公司信息</h2>
+            <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        </div>
+        <el-form :model="form" ref="formRef" label-width="110px" v-loading="loading" style="max-width:800px">
+            <el-card class="form-card">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="公司名称" prop="name" :rules="[{required:true,message:'请输入公司名称'}]">
+                            <el-input v-model="form.name"/>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="行业">
+                            <el-select v-model="form.industry" style="width:100%">
+                                <el-option v-for="i in industries" :key="i" :label="i" :value="i"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="公司规模">
+                            <el-select v-model="form.scale" style="width:100%">
+                                <el-option label="<20人" :value="1"/>
+                                <el-option label="20-99人" :value="2"/>
+                                <el-option label="100-499人" :value="3"/>
+                                <el-option label="500-999人" :value="4"/>
+                                <el-option label="1000+人" :value="5"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="融资阶段">
+                            <el-select v-model="form.financingStage" style="width:100%">
+                                <el-option v-for="s in stages" :key="s" :label="s" :value="s"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="城市">
+                            <el-input v-model="form.city"/>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="官网">
+                            <el-input v-model="form.website" placeholder="https://"/>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="24">
+                        <el-form-item label="详细地址">
+                            <el-input v-model="form.address"/>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="24">
+                        <el-form-item label="公司简介">
+                            <el-input v-model="form.description" type="textarea" :rows="5"/>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-card>
+        </el-form>
+    </div>
+</th:block>
+<th:block th:fragment="script-fragment">
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+createApp({
+    setup() {
+        const formRef = ref(null);
+        const loading = ref(false);
+        const saving = ref(false);
+        const industries = ['互联网','金融','教育','医疗','制造','零售','物流','房地产','其他'];
+        const stages = ['未融资','天使轮','Pre-A轮','A轮','B轮','C轮','D轮及以上','上市','不需要融资'];
+        const form = reactive({ name:'', industry:'互联网', scale:2, financingStage:'', city:'', address:'', website:'', description:'' });
+
+        const save = () => {
+            saving.value = true;
+            window.RecruitApi.saveCompany(form)
+                .then(() => ElementPlus.ElMessage.success('保存成功'))
+                .catch(err => ElementPlus.ElMessage.error(err.response?.data?.message || '保存失败'))
+                .finally(() => { saving.value = false; });
+        };
+
+        return { formRef, form, loading, saving, industries, stages, save };
+    }
+}).use(ElementPlus).mount('#hr-company-app');
+</script>
+</th:block>
+</body>
+</html>

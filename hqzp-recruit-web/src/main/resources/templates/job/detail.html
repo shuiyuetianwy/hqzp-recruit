@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: html(content=~{::main-fragment}, scriptExtra=~{::script-fragment})}">
+<head><title>职位详情</title></head>
+<body>
+
+<th:block th:fragment="main-fragment">
+    <div id="job-detail-app" class="page-container">
+        <div v-if="loading"><el-skeleton :rows="8" animated/></div>
+        <div v-else-if="!job"><el-empty description="职位不存在或已关闭"/></div>
+        <div v-else class="detail-layout">
+            <!-- Left: job info -->
+            <div class="detail-main">
+                <div class="job-detail-header">
+                    <div>
+                        <h1 class="job-detail-title">{{ job.title }}</h1>
+                        <div class="job-detail-meta">
+                            <span class="salary-highlight">{{ formatSalary(job.salaryMin, job.salaryMax) }}</span>
+                            <el-tag>{{ job.city }}</el-tag>
+                            <el-tag type="info">{{ job.experience || '经验不限' }}</el-tag>
+                            <el-tag type="info">{{ job.education || '学历不限' }}</el-tag>
+                            <el-tag type="success" v-if="job.jobType === 1">全职</el-tag>
+                            <el-tag type="warning" v-else-if="job.jobType === 2">兼职</el-tag>
+                            <el-tag type="warning" v-else-if="job.jobType === 3">实习</el-tag>
+                        </div>
+                    </div>
+                    <el-button type="primary" size="large" :disabled="job.applied"
+                               @click="apply">
+                        {{ job.applied ? '已投递' : '立即投递' }}
+                    </el-button>
+                </div>
+
+                <el-divider/>
+
+                <div class="section-block">
+                    <h3>职位描述</h3>
+                    <div class="rich-text" v-html="job.description"></div>
+                </div>
+                <div class="section-block" v-if="job.requirement">
+                    <h3>任职要求</h3>
+                    <div class="rich-text" v-html="job.requirement"></div>
+                </div>
+                <div class="section-block">
+                    <h3>工作地址</h3>
+                    <p>{{ job.address || job.city }}</p>
+                </div>
+            </div>
+
+            <!-- Right: company card -->
+            <div class="detail-sidebar">
+                <div class="company-card-detail" @click="goToCompany(job.companyId)">
+                    <img :src="job.companyLogo || '/images/default-company.png'"
+                         class="company-logo-lg" alt=""/>
+                    <h3>{{ job.companyName }}</h3>
+                    <div class="company-meta-row">
+                        <span>{{ job.companyIndustry }}</span>
+                        <span>{{ scaleLabel(job.companyScale) }}</span>
+                    </div>
+                </div>
+                <div class="job-stats">
+                    <div><span>浏览</span><strong>{{ job.viewCount }}</strong></div>
+                    <div><span>投递</span><strong>{{ job.deliveryCount }}</strong></div>
+                    <div><span>招聘</span><strong>{{ job.headcount }}人</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apply dialog -->
+        <el-dialog v-model="applyDialogVisible" title="投递职位" width="500px">
+            <p>请选择要投递的简历：</p>
+            <div v-if="!myResume" class="empty-state">
+                <p>您还没有简历，请先完善简历</p>
+                <el-button type="primary" @click="() => location.href='/candidate/resume'">去完善简历</el-button>
+            </div>
+            <div v-else class="resume-preview">
+                <el-radio v-model="selectedResumeId" :label="myResume.id">
+                    {{ myResume.realName }} · {{ myResume.currentTitle || '未填写职位' }}
+                </el-radio>
+            </div>
+            <template #footer>
+                <el-button @click="applyDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="applying" :disabled="!myResume" @click="confirmApply">
+                    确认投递
+                </el-button>
+            </template>
+        </el-dialog>
+    </div>
+</th:block>
+
+<th:block th:fragment="script-fragment">
+<script th:inline="javascript">
+const jobId = /*[[${jobId}]]*/ null;
+const { createApp, ref, onMounted } = Vue;
+createApp({
+    setup() {
+        const loading = ref(true);
+        const job = ref(null);
+        const myResume = ref(null);
+        const applyDialogVisible = ref(false);
+        const selectedResumeId = ref(null);
+        const applying = ref(false);
+
+        const formatSalary = (min, max) => {
+            if (!min && !max) return '薪资面议';
+            const fmt = v => v >= 10000 ? (v/1000).toFixed(0)+'K' : v+'元';
+            return fmt(min) + '-' + fmt(max) + '/月';
+        };
+        const scaleLabel = (s) => (['','<20人','20-99人','100-499人','500-999人','1000+人'][s] || '');
+        const goToCompany = (id) => window.location.href = `/companies/${id}`;
+
+        const apply = () => {
+            if (!RecruitUtils.getToken()) {
+                location.href = `/login?redirect=/jobs/${jobId}`;
+                return;
+            }
+            applyDialogVisible.value = true;
+            if (!myResume.value) {
+                window.RecruitApi.getMyResume().then(res => {
+                    myResume.value = res.data;
+                    selectedResumeId.value = res.data?.id;
+                }).catch(() => {});
+            }
+        };
+
+        const confirmApply = () => {
+            applying.value = true;
+            window.RecruitApi.applyJob({ jobId: jobId, resumeId: selectedResumeId.value })
+                .then(() => {
+                    ElementPlus.ElMessage.success('投递成功！');
+                    applyDialogVisible.value = false;
+                    job.value.applied = true;
+                })
+                .catch(err => ElementPlus.ElMessage.error(err.response?.data?.message || '投递失败'))
+                .finally(() => { applying.value = false; });
+        };
+
+        onMounted(() => {
+            window.RecruitApi.getJobDetail(jobId).then(res => {
+                job.value = res.data;
+                loading.value = false;
+            }).catch(() => { loading.value = false; });
+        });
+
+        return { loading, job, myResume, applyDialogVisible, selectedResumeId, applying,
+                 formatSalary, scaleLabel, goToCompany, apply, confirmApply };
+    }
+}).use(ElementPlus).mount('#job-detail-app');
+</script>
+</th:block>
+
+</body>
+</html>
