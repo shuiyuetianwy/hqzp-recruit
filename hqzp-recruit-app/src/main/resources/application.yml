@@ -8,6 +8,8 @@ server:
 spring:
   application:
     name: hqzp-recruit
+  banner:
+    location: classpath:banner.txt
 
   profiles:
     active: dev
