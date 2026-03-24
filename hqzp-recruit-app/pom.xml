@@ -10,7 +10,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>hqzp-recruit-startup</artifactId>
+    <artifactId>hqzp-recruit-app</artifactId>
     <packaging>jar</packaging>
     <name>hqzp-recruit-startup</name>
     <description>Startup module: application entry point, JPA/MyBatis-Plus, datasource, security interceptor</description>

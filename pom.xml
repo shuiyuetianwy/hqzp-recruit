@@ -20,7 +20,7 @@
 
     <modules>
         <module>hqzp-recruit-common</module>
-        <module>hqzp-recruit-startup</module>
+        <module>hqzp-recruit-app</module>
         <module>hqzp-recruit-ai</module>
         <module>hqzp-recruit-file</module>
         <module>hqzp-recruit-web</module>
