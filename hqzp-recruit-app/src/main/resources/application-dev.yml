@@ -28,11 +28,24 @@ spring:
         enabled: true
         url-pattern: /*
         exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
-
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+  # Redis
+  redis:
+    host: ${REDIS_HOST:127.0.0.1}
+    port: ${REDIS_PORT:16379}
+    password: ${REDIS_PASSWORD:hxkj@123}
+    database: 0
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
 
 # AI module
 deepseek:

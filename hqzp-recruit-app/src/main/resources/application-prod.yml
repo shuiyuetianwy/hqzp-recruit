@@ -13,11 +13,24 @@ spring:
       filters: stat,wall,slf4j
       stat-view-servlet:
         enabled: false
-
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+
+  # Redis
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 0
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
 
 deepseek:
   api-key: ${DEEPSEEK_API_KEY}
