@@ -7,13 +7,13 @@ import com.hqzp.recruit.common.domain.vo.ApplicationVO;
 import com.hqzp.recruit.common.result.PageResult;
 import com.hqzp.recruit.common.result.R;
 import com.hqzp.recruit.startup.service.ApplicationService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-@Api(tags = "投递管理")
+@Tag(name =  "投递管理")
 @RestController
 @RequestMapping("/api/applications")
 @RequiredArgsConstructor
@@ -21,7 +21,7 @@ public class ApplicationController {
 
     private final ApplicationService applicationService;
 
-    @ApiOperation("投递职位")
+    @Operation(summary ="投递职位")
     @Log(module = "投递", operation = "投递")
     @RequireLogin(userTypes = {3})
     @PostMapping
@@ -29,21 +29,21 @@ public class ApplicationController {
         return R.ok(applicationService.apply(req.getJobId(), req.getResumeId()));
     }
 
-    @ApiOperation("HR查看投递列表")
+    @Operation(summary ="HR查看投递列表")
     @RequireLogin(userTypes = {1, 2})
     @GetMapping("/hr")
     public R<PageResult<ApplicationVO>> pageForHr(ApplicationQuery query) {
         return R.ok(applicationService.pageForHr(query));
     }
 
-    @ApiOperation("求职者查看投递记录")
+    @Operation(summary ="求职者查看投递记录")
     @RequireLogin(userTypes = {3})
     @GetMapping("/candidate")
     public R<PageResult<ApplicationVO>> pageForCandidate(ApplicationQuery query) {
         return R.ok(applicationService.pageForCandidate(query));
     }
 
-    @ApiOperation("更新投递状态（HR操作）")
+    @Operation(summary ="更新投递状态（HR操作）")
     @Log(module = "投递", operation = "更新状态")
     @RequireLogin(userTypes = {1, 2})
     @PutMapping("/{id}/status")
@@ -53,7 +53,7 @@ public class ApplicationController {
         return R.ok();
     }
 
-    @ApiOperation("安排面试")
+    @Operation(summary ="安排面试")
     @Log(module = "投递", operation = "安排面试")
     @RequireLogin(userTypes = {1, 2})
     @PutMapping("/{id}/interview")
@@ -63,7 +63,7 @@ public class ApplicationController {
         return R.ok();
     }
 
-    @ApiOperation("放弃投递（求职者操作）")
+    @Operation(summary ="放弃投递（求职者操作）")
     @Log(module = "投递", operation = "放弃")
     @RequireLogin(userTypes = {3})
     @PutMapping("/{id}/abandon")

@@ -4,13 +4,13 @@ import com.hqzp.recruit.common.annotation.RequireLogin;
 import com.hqzp.recruit.common.result.R;
 import com.hqzp.recruit.file.dto.UploadResult;
 import com.hqzp.recruit.file.service.FileStorageService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-@Api(tags = "文件上传")
+@Tag(name =  "文件上传")
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
@@ -18,14 +18,14 @@ public class FileController {
 
     private final FileStorageService fileStorageService;
 
-    @ApiOperation("上传头像")
+    @Operation(summary ="上传头像")
     @RequireLogin
     @PostMapping("/avatar")
     public R<UploadResult> uploadAvatar(@RequestParam("file") MultipartFile file) {
         return R.ok(fileStorageService.upload(file, "avatar", null));
     }
 
-    @ApiOperation("上传简历附件（PDF/Word）")
+    @Operation(summary ="上传简历附件（PDF/Word）")
     @RequireLogin(userTypes = {3})
     @PostMapping("/resume")
     public R<UploadResult> uploadResume(@RequestParam("file") MultipartFile file,
@@ -33,7 +33,7 @@ public class FileController {
         return R.ok(fileStorageService.upload(file, "resume", resumeId));
     }
 
-    @ApiOperation("上传公司Logo")
+    @Operation(summary ="上传公司Logo")
     @RequireLogin(userTypes = {1, 2})
     @PostMapping("/company-logo")
     public R<UploadResult> uploadCompanyLogo(@RequestParam("file") MultipartFile file,
@@ -41,7 +41,7 @@ public class FileController {
         return R.ok(fileStorageService.upload(file, "company_logo", companyId));
     }
 
-    @ApiOperation("通用文件上传")
+    @Operation(summary ="通用文件上传")
     @RequireLogin
     @PostMapping("/upload")
     public R<UploadResult> upload(@RequestParam("file") MultipartFile file,
@@ -50,14 +50,14 @@ public class FileController {
         return R.ok(fileStorageService.upload(file, bizType, bizId));
     }
 
-    @ApiOperation("获取文件预签名URL")
+    @Operation(summary ="获取文件预签名URL")
     @RequireLogin
     @GetMapping("/presigned-url")
     public R<String> presignedUrl(@RequestParam String fileKey) {
         return R.ok(fileStorageService.generatePresignedUrl(fileKey));
     }
 
-    @ApiOperation("删除文件")
+    @Operation(summary ="删除文件")
     @RequireLogin(userTypes = {1})
     @DeleteMapping
     public R<Void> delete(@RequestParam String fileKey) {

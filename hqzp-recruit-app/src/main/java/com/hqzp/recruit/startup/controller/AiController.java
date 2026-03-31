@@ -7,13 +7,13 @@ import com.hqzp.recruit.common.domain.vo.ResumeVO;
 import com.hqzp.recruit.common.result.R;
 import com.hqzp.recruit.common.utils.SecurityUtils;
 import com.hqzp.recruit.startup.service.ResumeService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-@Api(tags = "AI功能")
+@Tag(name =  "AI功能")
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -22,7 +22,7 @@ public class AiController {
     private final AiRecruitService aiRecruitService;
     private final ResumeService resumeService;
 
-    @ApiOperation("AI分析简历")
+    @Operation(summary ="AI分析简历")
     @RequireLogin
     @PostMapping("/resume/analyse/{resumeId}")
     public R<AiResult> analyseResume(@PathVariable Long resumeId) {
@@ -31,7 +31,7 @@ public class AiController {
         return R.ok(aiRecruitService.analyseResume(resumeId, resumeText));
     }
 
-    @ApiOperation("AI职位匹配评分")
+    @Operation(summary ="AI职位匹配评分")
     @RequireLogin(userTypes = {1, 2})
     @PostMapping("/match")
     public R<AiResult> matchJobResume(@RequestBody MatchRequest req) {
@@ -39,7 +39,7 @@ public class AiController {
                 req.getApplicationId(), req.getJobDescription(), req.getResumeText()));
     }
 
-    @ApiOperation("AI生成面试题")
+    @Operation(summary ="AI生成面试题")
     @RequireLogin(userTypes = {1, 2})
     @PostMapping("/interview-questions")
     public R<AiResult> generateInterviewQuestions(@RequestBody InterviewQuestionsRequest req) {
@@ -48,7 +48,7 @@ public class AiController {
                 req.getApplicationId(), req.getJobDescription(), req.getResumeText(), count));
     }
 
-    @ApiOperation("AI职业发展建议")
+    @Operation(summary ="AI职业发展建议")
     @RequireLogin(userTypes = {3})
     @PostMapping("/career-advice")
     public R<AiResult> careerAdvice(@RequestBody CareerAdviceRequest req) {
@@ -58,7 +58,7 @@ public class AiController {
         return R.ok(aiRecruitService.careerAdvice(userId, resumeText, req.getTargetJob()));
     }
 
-    @ApiOperation("AI优化简历片段")
+    @Operation(summary ="AI优化简历片段")
     @RequireLogin(userTypes = {3})
     @PostMapping("/resume/optimise")
     public R<AiResult> optimiseResumeSection(@RequestBody OptimiseRequest req) {

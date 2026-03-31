@@ -8,13 +8,13 @@ import com.hqzp.recruit.common.domain.vo.JobVO;
 import com.hqzp.recruit.common.result.PageResult;
 import com.hqzp.recruit.common.result.R;
 import com.hqzp.recruit.startup.service.JobService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-@Api(tags = "职位管理")
+@Tag(name =  "职位管理")
 @RestController
 @RequestMapping("/api/jobs")
 @RequiredArgsConstructor
@@ -22,19 +22,19 @@ public class JobController {
 
     private final JobService jobService;
 
-    @ApiOperation("职位列表（分页）")
+    @Operation(summary ="职位列表（分页）")
     @GetMapping
     public R<PageResult<JobVO>> page(JobQuery query) {
         return R.ok(jobService.page(query));
     }
 
-    @ApiOperation("职位详情")
+    @Operation(summary ="职位详情")
     @GetMapping("/{id}")
     public R<JobVO> detail(@PathVariable Long id) {
         return R.ok(jobService.getById(id));
     }
 
-    @ApiOperation("发布职位")
+    @Operation(summary ="发布职位")
     @Log(module = "职位", operation = "创建")
     @RequireLogin(userTypes = {2})
     @PostMapping
@@ -42,7 +42,7 @@ public class JobController {
         return R.ok(jobService.create(dto));
     }
 
-    @ApiOperation("编辑职位")
+    @Operation(summary ="编辑职位")
     @Log(module = "职位", operation = "编辑")
     @RequireLogin(userTypes = {2})
     @PutMapping("/{id}")
@@ -52,7 +52,7 @@ public class JobController {
         return R.ok();
     }
 
-    @ApiOperation("上架职位")
+    @Operation(summary ="上架职位")
     @Log(module = "职位", operation = "上架")
     @RequireLogin(userTypes = {2})
     @PutMapping("/{id}/publish")
@@ -61,7 +61,7 @@ public class JobController {
         return R.ok();
     }
 
-    @ApiOperation("关闭职位")
+    @Operation(summary ="关闭职位")
     @Log(module = "职位", operation = "关闭")
     @RequireLogin(userTypes = {2})
     @PutMapping("/{id}/close")
@@ -70,7 +70,7 @@ public class JobController {
         return R.ok();
     }
 
-    @ApiOperation("删除职位")
+    @Operation(summary ="删除职位")
     @Log(module = "职位", operation = "删除")
     @RequireLogin(userTypes = {1, 2})
     @DeleteMapping("/{id}")
